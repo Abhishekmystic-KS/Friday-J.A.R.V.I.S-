@@ -8,6 +8,8 @@ __pycache__/
 
 # Local secrets
 voice_ui/env/.env
+voice_ui/logs/
+voice_ui/memory/
 
 # OS/editor
 .DS_Store
