@@ -7,9 +7,9 @@ __pycache__/
 .venv/
 
 # Local secrets
-voice_ui/env/.env
-voice_ui/logs/
-voice_ui/memory/
+env/.env
+data/logs/
+data/memory/
 
 # OS/editor
 .DS_Store
