@@ -1,4 +1,4 @@
-# J.A.R.V.I.S (WIP)
+# J.A.R.V.I.S 
 
 This is a voice assistant project in progress.
 
