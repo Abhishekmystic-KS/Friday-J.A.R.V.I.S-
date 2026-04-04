@@ -12,6 +12,9 @@ This is a voice assistant project in progress.
 - [config/app.json](config/app.json) — settings
 - [env/.env](env/.env) — API key
 
+## Demo Video
+![img alt](https://github.com/Abhishekmystic-KS/Friday-J.A.R.V.I.S-/blob/db326c0586b9412a7d377337528fd355cc3d538f/readmeui/demovideo.mp4)
+
 ## Quick setup
 
 ```bash
