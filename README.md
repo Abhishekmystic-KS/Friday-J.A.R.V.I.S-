@@ -13,6 +13,7 @@ This is a voice assistant project in progress.
 - [env/.env](env/.env) — API key
 
 ## Demo Video
+[![Demo](./readmeui/preview.gif)](./readmeui/demovideo.mp4)
 <video src="https://raw.githubusercontent.com/Abhishekmystic-KS/Friday-J.A.R.V.I.S-/db326c0586b9412a7d377337528fd355cc3d538f/readmeui/demovideo.mp4" controls="controls" muted="muted" style="max-width: 100%;"></video>
 
 ## Quick setup
