@@ -122,9 +122,57 @@ def speak(text, tts_voice):
             os.remove(audio_path)
 
 
-def launch_orb():
+def is_process_running(proc):
+    return proc is not None and proc.poll() is None
+
+
+def stop_process(proc):
+    if not is_process_running(proc):
+        return None
+
+    try:
+        proc.terminate()
+        proc.wait(timeout=1.5)
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    return None
+
+
+def launch_orb(current_proc=None):
+    if is_process_running(current_proc):
+        return current_proc
+
     orb_runner = ROOT_DIR / "scripts" / "run_orb.py"
-    subprocess.Popen([sys.executable, str(orb_runner)])
+    try:
+        return subprocess.Popen(
+            [sys.executable, str(orb_runner)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        return None
+
+
+def launch_robo_popup(current_proc=None):
+    if is_process_running(current_proc):
+        return current_proc
+
+    robo_runner = ROOT_DIR / "scripts" / "run_robo.py"
+    if not robo_runner.exists():
+        return None
+    try:
+        return subprocess.Popen(
+            [sys.executable, str(robo_runner)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        return None
 
 
 def record_with_vad(sample_rate, channels, hotkey_event):
@@ -243,6 +291,10 @@ def run_assistant():
     print("Wake words:", ", ".join(wake_phrases))
     print("Sleep phrases:", ", ".join(sleep_phrases))
 
+    # Start with idle orb visible.
+    orb_process = launch_orb()
+    robo_process = None
+
     history = [{"role": "system", "content": str(config["system_prompt"])}]
     is_awake = True
     last_wake = 0.0
@@ -256,7 +308,10 @@ def run_assistant():
                 if wav_path == HOTKEY_SIGNAL:
                     is_awake = True
                     play_start_sound()
-                    launch_orb()
+                    orb_process = stop_process(orb_process)
+                    robo_process = launch_robo_popup(robo_process)
+                    if not is_process_running(robo_process):
+                        orb_process = launch_orb(orb_process)
                     speak("Hotkey received. I am ready.", tts_voice)
                     continue
 
@@ -275,6 +330,8 @@ def run_assistant():
 
                 if contains_any(normalized, sleep_phrases):
                     is_awake = False
+                    robo_process = stop_process(robo_process)
+                    orb_process = launch_orb(orb_process)
                     sleep_msg = "Going to sleep. Say friday or hey friday to wake me."
                     speak(sleep_msg, tts_voice)
                     logger.info("assistant=%s", sleep_msg)
@@ -284,7 +341,10 @@ def run_assistant():
                     if contains_any(normalized, wake_phrases):
                         is_awake = True
                         play_start_sound()
-                        launch_orb()
+                        orb_process = stop_process(orb_process)
+                        robo_process = launch_robo_popup(robo_process)
+                        if not is_process_running(robo_process):
+                            orb_process = launch_orb(orb_process)
                         speak("I am awake. How can I help?", tts_voice)
                         last_wake = now
                     continue
@@ -292,7 +352,10 @@ def run_assistant():
                 if contains_any(normalized, wake_phrases):
                     if now - last_wake >= wake_cooldown:
                         play_start_sound()
-                        launch_orb()
+                        orb_process = stop_process(orb_process)
+                        robo_process = launch_robo_popup(robo_process)
+                        if not is_process_running(robo_process):
+                            orb_process = launch_orb(orb_process)
                         speak("I am here. How can I help?", tts_voice)
                         last_wake = now
                     continue
@@ -318,6 +381,8 @@ def run_assistant():
     except KeyboardInterrupt:
         print("Stopped")
     finally:
+        stop_process(robo_process)
+        stop_process(orb_process)
         if hotkey_listener is not None:
             try:
                 hotkey_listener.stop()

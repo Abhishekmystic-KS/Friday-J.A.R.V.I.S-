@@ -14,3 +14,8 @@ data/memory/
 # OS/editor
 .DS_Store
 .vscode/
+
+# Generated animation assets
+video_Ani/robo_*.gif
+video_Ani/*_palette.png
+video_Ani/robo_frames_*/
