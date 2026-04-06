@@ -9,7 +9,7 @@ SRC_DIR = Path(__file__).resolve().parents[2]
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from jarvis.ui.chat_widget import ChatWidget
+from jarvis.ui.chat_window import launch_chat_window
 
 ROOT = Path(__file__).resolve().parents[3]
 VIDEO_DIR = ROOT / "assets" / "media" / "animations"
@@ -19,7 +19,6 @@ FPS = 24
 CROP_SIZE = 640
 FRAMES_DIR = VIDEO_DIR / f"robo_frames_{SIZE}_v1"
 BG_KEY = "#06090f"
-BUTTON_SIZE = 32
 
 
 def ensure_frames():
@@ -71,55 +70,46 @@ class RoboPopupApp:
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
 
-        # Container frame for entire layout (animation + button + chat)
-        self.container = tk.Frame(root, bg=BG_KEY)
-        self.container.pack(fill="both", expand=True)
+        # Main container
+        self.main_frame = tk.Frame(root, bg=BG_KEY)
+        self.main_frame.pack(fill="both", expand=True)
 
-        # Animation frame
-        anim_frame = tk.Frame(self.container, bg=BG_KEY, width=SIZE, height=SIZE)
-        anim_frame.pack(side="top", fill="both", expand=True)
-        anim_frame.pack_propagate(False)
-
-        self.label = tk.Label(anim_frame, bg=BG_KEY, bd=0, highlightthickness=0)
+        # Animation label
+        self.label = tk.Label(self.main_frame, bg=BG_KEY, bd=0, highlightthickness=0)
         self.label.pack(fill="both", expand=True)
 
         # Button frame (below animation)
-        button_frame = tk.Frame(self.container, bg=BG_KEY, height=BUTTON_SIZE)
-        button_frame.pack(side="top", fill="x", padx=5, pady=5)
+        button_frame = tk.Frame(self.main_frame, bg=BG_KEY, height=40)
+        button_frame.pack(fill="x", padx=5, pady=5)
         button_frame.pack_propagate(False)
 
-        # Chat toggle button
+        # Chat button
         self.chat_btn = tk.Button(
             button_frame,
-            text="💬",
-            command=self.toggle_chat,
+            text="💬 Chat",
+            command=self.open_chat,
             bg="#0d0d0d",
             fg="#00ff00",
-            font=("Mono", 14),
+            font=("Mono", 10, "bold"),
             relief="flat",
             bd=1,
-            width=3,
-            height=1,
+            padx=10,
+            pady=5,
         )
         self.chat_btn.pack(side="left", padx=2)
 
         self.drag_offset_x = 0
         self.drag_offset_y = 0
-        self._bind_drag(self.root)
-        self._bind_drag(self.label)
+        self.is_dragging = False
+        
+        # Bind drag events to label (animation area only)
+        self.label.bind("<ButtonPress-1>", self.start_drag)
+        self.label.bind("<B1-Motion>", self.on_drag)
+        self.label.bind("<ButtonRelease-1>", self.stop_drag)
 
         self.frames = []
         self.index = 0
         self.delay_ms = int(1000 / FPS)
-
-        # Chat widget container
-        self.chat_container = tk.Frame(self.container, bg=BG_KEY)
-        # Initially don't pack - will be packed on toggle
-
-        # Create chat widget inside container
-        self.chat_widget = ChatWidget(self.chat_container, height=200)
-        self.chat_widget_visible = False
-        self.is_dragging = False
 
         self.load_frames()
         self.position_window()
@@ -128,27 +118,20 @@ class RoboPopupApp:
     def position_window(self):
         self.root.update_idletasks()
         sw = self.root.winfo_screenwidth()
-        sh = self.root.winfo_screenheight()
         x = max(0, sw - SIZE - 26)
         y = 72
-        # Small window initially (animation + button)
-        self.root.geometry(f"{SIZE}x{SIZE + BUTTON_SIZE + 10}+{x}+{y}")
-
-    def _bind_drag(self, widget):
-        widget.bind("<ButtonPress-1>", self.start_drag)
-        widget.bind("<B1-Motion>", self.on_drag)
-        widget.bind("<ButtonRelease-1>", self.stop_drag)
+        # Fixed size: animation (320x320) + button (40px) + padding
+        self.root.geometry(f"{SIZE}x370+{x}+{y}")
 
     def start_drag(self, event):
-        # Don't drag if clicking on button
-        if event.widget == self.chat_btn:
-            return
+        """Start dragging animation area."""
         self.drag_offset_x = event.x_root - self.root.winfo_x()
         self.drag_offset_y = event.y_root - self.root.winfo_y()
         self.is_dragging = True
 
     def on_drag(self, event):
-        if not hasattr(self, 'is_dragging') or not self.is_dragging:
+        """Handle window dragging."""
+        if not self.is_dragging:
             return
             
         sw = self.root.winfo_screenwidth()
@@ -158,17 +141,15 @@ class RoboPopupApp:
         y = event.y_root - self.drag_offset_y
 
         max_x = max(0, sw - SIZE)
-        
-        # Get current window height (maintain it during drag)
-        current_height = self.root.winfo_height()
-        max_y = max(0, sh - current_height)
+        max_y = max(0, sh - 370)
 
         x = min(max(0, x), max_x)
         y = min(max(0, y), max_y)
 
-        self.root.geometry(f"{SIZE}x{current_height}+{x}+{y}")
+        self.root.geometry(f"{SIZE}x370+{x}+{y}")
 
     def stop_drag(self, event):
+        """Stop dragging."""
         self.is_dragging = False
 
     def load_frames(self):
@@ -192,25 +173,9 @@ class RoboPopupApp:
             self.index = (self.index + 1) % len(self.frames)
         self.root.after(self.delay_ms, self.animate)
 
-    def toggle_chat(self):
-        """Toggle chat panel visibility."""
-        sw = self.root.winfo_screenwidth()
-        sh = self.root.winfo_screenheight()
-        x_pos = max(0, sw - SIZE - 26)
-
-        if self.chat_widget_visible:
-            # Hide chat
-            self.chat_container.pack_forget()
-            self.root.geometry(f"{SIZE}x{SIZE + BUTTON_SIZE + 10}+{x_pos}+72")
-            self.chat_widget_visible = False
-        else:
-            # Show chat
-            self.chat_container.pack(side="top", fill="both", expand=True, padx=0, pady=0)
-            # Expand window to show chat
-            y_pos = max(0, sh - 450)
-            self.root.geometry(f"{SIZE}x450+{x_pos}+{y_pos}")
-            self.chat_widget_visible = True
-            self.chat_widget.input_field.focus()
+    def open_chat(self):
+        """Launch standalone chat window."""
+        launch_chat_window()
 
 
 def main():

@@ -1,4 +1,4 @@
-"""Chat widget for RAG knowledge base queries."""
+"""Standalone chat window for RAG knowledge base queries."""
 
 import sys
 import threading
@@ -19,34 +19,61 @@ except ImportError:
     answer_query = None
 
 
-class ChatWidget:
+class ChatWindow:
     """
-    Chat panel for RAG knowledge base queries.
+    Standalone window for RAG knowledge base queries.
+    Opens as independent window (600x500), can be moved/resized/closed separately from robo popup.
     Runs RAG queries in background thread to avoid blocking UI.
     """
 
-    def __init__(self, parent, height=200):
-        self.parent = parent
-        self.height = height
+    _instance = None  # Singleton to prevent multiple windows
+
+    def __new__(cls):
+        if cls._instance is not None:
+            # Bring existing window to front
+            cls._instance.window.lift()
+            cls._instance.window.focus()
+            return cls._instance
+        return super().__new__(cls)
+
+    def __init__(self):
+        if ChatWindow._instance is not None:
+            return
+        
+        ChatWindow._instance = self
+        
         self.query_thread = None
         self.rag_available = RAG_AVAILABLE
 
-        # Main frame (fills parent)
-        self.frame = tk.Frame(parent, bg="#1a1a1a")
-        self.frame.pack(fill="both", expand=True)
+        # Create standalone window
+        self.window = tk.Toplevel()
+        self.window.title("FRIDAY - RAG Chat")
+        self.window.geometry("600x500")
+        self.window.configure(bg="#1a1a1a")
+        
+        # Icon/styling
+        self.window.resizable(True, True)
+        self.window.attributes("-topmost", False)
 
-        # Header with title
-        header = tk.Frame(self.frame, bg="#0d0d0d")
+        # Handle window close
+        self.window.protocol("WM_DELETE_WINDOW", self.close_window)
+
+        # Header
+        header = tk.Frame(self.window, bg="#0d0d0d")
         header.pack(side="top", fill="x", padx=5, pady=5)
 
-        title = tk.Label(header, text="💬 RAG Knowledge Chat", fg="#00ff00", bg="#0d0d0d", font=("Mono", 10, "bold"))
+        title = tk.Label(
+            header,
+            text="💬 FRIDAY - RAG Knowledge Chat",
+            fg="#00ff00",
+            bg="#0d0d0d",
+            font=("Mono", 11, "bold"),
+        )
         title.pack(side="left", padx=5)
 
         # Message history (read-only text widget)
         self.message_display = scrolledtext.ScrolledText(
-            self.frame,
-            height=8,
-            width=50,
+            self.window,
             bg="#0a0a0a",
             fg="#00ff00",
             font=("Mono", 9),
@@ -64,7 +91,7 @@ class ChatWidget:
         self.message_display.tag_config("thinking", foreground="#ffff00")
 
         # Input frame
-        input_frame = tk.Frame(self.frame, bg="#1a1a1a")
+        input_frame = tk.Frame(self.window, bg="#1a1a1a")
         input_frame.pack(side="bottom", fill="x", padx=5, pady=5)
 
         self.input_field = tk.Entry(
@@ -87,29 +114,37 @@ class ChatWidget:
             font=("Mono", 8, "bold"),
             relief="flat",
             bd=1,
-            padx=10,
+            padx=15,
         )
         self.send_btn.pack(side="right")
 
-        # Message history storage (limit to 20 messages)
+        # Message history storage
         self.messages = []
-        self.max_messages = 20
+        self.max_messages = 30
 
-        # Check RAG availability and show warning if needed
+        # Check RAG availability
         if not self.rag_available:
             self._add_message(
                 "System",
-                "⚠️ RAG module not available. Ensure chromadb is installed:\npip install chromadb",
+                "⚠️ RAG module not available. Ensure chromadb is installed:\npip install chromadb langchain-text-splitters requests",
                 "error",
             )
             self.input_field.config(state="disabled")
             self.send_btn.config(state="disabled")
+        else:
+            self._add_message(
+                "FRIDAY",
+                "👋 Hello! Ask me about anything in the knowledge base.",
+                "rag",
+            )
+
+        self.input_field.focus()
 
     def _add_message(self, sender, text, tag="rag"):
         """Add message to display and store in history."""
         self.messages.append({"sender": sender, "text": text})
 
-        # Keep only last 20 messages
+        # Keep only last 30 messages
         if len(self.messages) > self.max_messages:
             self.messages.pop(0)
 
@@ -181,6 +216,12 @@ class ChatWidget:
             self.send_btn.config(state="normal")
             self.input_field.focus()
 
-    def get_frame(self):
-        """Return the frame widget."""
-        return self.frame
+    def close_window(self):
+        """Close the chat window and reset singleton."""
+        ChatWindow._instance = None
+        self.window.destroy()
+
+
+def launch_chat_window():
+    """Launch chat window (or bring to front if already open)."""
+    ChatWindow()
