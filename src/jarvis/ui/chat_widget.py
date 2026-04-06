@@ -21,40 +21,26 @@ except ImportError:
 
 class ChatWidget:
     """
-    Collapsible chat panel for RAG knowledge base queries.
+    Chat panel for RAG knowledge base queries.
     Runs RAG queries in background thread to avoid blocking UI.
     """
 
     def __init__(self, parent, height=200):
         self.parent = parent
         self.height = height
-        self.is_expanded = False
         self.query_thread = None
         self.rag_available = RAG_AVAILABLE
 
-        # Main container frame
-        self.frame = tk.Frame(parent, bg="#1a1a1a", height=height)
-        self.frame.pack_propagate(False)
+        # Main frame (fills parent)
+        self.frame = tk.Frame(parent, bg="#1a1a1a")
+        self.frame.pack(fill="both", expand=True)
 
-        # Header with close button
+        # Header with title
         header = tk.Frame(self.frame, bg="#0d0d0d")
         header.pack(side="top", fill="x", padx=5, pady=5)
 
         title = tk.Label(header, text="💬 RAG Knowledge Chat", fg="#00ff00", bg="#0d0d0d", font=("Mono", 10, "bold"))
         title.pack(side="left", padx=5)
-
-        close_btn = tk.Button(
-            header,
-            text="✕",
-            command=self.collapse,
-            bg="#0d0d0d",
-            fg="#ff6b6b",
-            font=("Mono", 8),
-            bd=0,
-            relief="flat",
-            padx=2,
-        )
-        close_btn.pack(side="right", padx=5)
 
         # Message history (read-only text widget)
         self.message_display = scrolledtext.ScrolledText(
@@ -194,26 +180,6 @@ class ChatWidget:
             # Re-enable send button
             self.send_btn.config(state="normal")
             self.input_field.focus()
-
-    def toggle(self):
-        """Toggle chat panel visibility."""
-        if self.is_expanded:
-            self.collapse()
-        else:
-            self.expand()
-
-    def expand(self):
-        """Show chat panel."""
-        if not self.is_expanded:
-            self.frame.pack(side="bottom", fill="both", expand=False, padx=0, pady=0)
-            self.is_expanded = True
-            self.input_field.focus()
-
-    def collapse(self):
-        """Hide chat panel."""
-        if self.is_expanded:
-            self.frame.pack_forget()
-            self.is_expanded = False
 
     def get_frame(self):
         """Return the frame widget."""

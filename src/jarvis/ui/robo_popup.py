@@ -71,17 +71,21 @@ class RoboPopupApp:
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
 
-        # Main container for animation + button
-        main_frame = tk.Frame(root, bg=BG_KEY)
-        main_frame.pack(fill="both", expand=True)
+        # Container frame for entire layout (animation + button + chat)
+        self.container = tk.Frame(root, bg=BG_KEY)
+        self.container.pack(fill="both", expand=True)
 
-        # Animation label
-        self.label = tk.Label(main_frame, bg=BG_KEY, bd=0, highlightthickness=0)
+        # Animation frame
+        anim_frame = tk.Frame(self.container, bg=BG_KEY, width=SIZE, height=SIZE)
+        anim_frame.pack(side="top", fill="both", expand=True)
+        anim_frame.pack_propagate(False)
+
+        self.label = tk.Label(anim_frame, bg=BG_KEY, bd=0, highlightthickness=0)
         self.label.pack(fill="both", expand=True)
 
         # Button frame (below animation)
-        button_frame = tk.Frame(main_frame, bg=BG_KEY, height=BUTTON_SIZE)
-        button_frame.pack(fill="x", padx=5, pady=5)
+        button_frame = tk.Frame(self.container, bg=BG_KEY, height=BUTTON_SIZE)
+        button_frame.pack(side="top", fill="x", padx=5, pady=5)
         button_frame.pack_propagate(False)
 
         # Chat toggle button
@@ -108,9 +112,13 @@ class RoboPopupApp:
         self.index = 0
         self.delay_ms = int(1000 / FPS)
 
-        # Chat widget (initially hidden)
-        self.chat_widget = ChatWidget(root, height=200)
-        self.chat_widget.collapse()
+        # Chat widget container
+        self.chat_container = tk.Frame(self.container, bg=BG_KEY)
+        # Initially don't pack - will be packed on toggle
+
+        # Create chat widget inside container
+        self.chat_widget = ChatWidget(self.chat_container, height=200)
+        self.chat_widget_visible = False
 
         self.load_frames()
         self.position_window()
@@ -120,11 +128,10 @@ class RoboPopupApp:
         self.root.update_idletasks()
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        # Window height = animation size + button + chat (when expanded)
-        # For now, set reasonable min height, window expands as needed
         x = max(0, sw - SIZE - 26)
         y = 72
-        self.root.geometry(f"{SIZE}x{SIZE+50}+{x}+{y}")
+        # Small window initially (animation + button)
+        self.root.geometry(f"{SIZE}x{SIZE + BUTTON_SIZE + 10}+{x}+{y}")
 
     def _bind_drag(self, widget):
         widget.bind("<ButtonPress-1>", self.start_drag)
@@ -142,12 +149,12 @@ class RoboPopupApp:
         y = event.y_root - self.drag_offset_y
 
         max_x = max(0, sw - SIZE)
-        max_y = max(0, sh - SIZE)
+        max_y = max(0, sh - (SIZE + BUTTON_SIZE + 10))
 
         x = min(max(0, x), max_x)
         y = min(max(0, y), max_y)
 
-        self.root.geometry(f"{SIZE}x{SIZE}+{x}+{y}")
+        self.root.geometry(f"{SIZE}x{SIZE + BUTTON_SIZE + 10}+{x}+{y}")
 
     def load_frames(self):
         if not ensure_frames():
@@ -172,20 +179,23 @@ class RoboPopupApp:
 
     def toggle_chat(self):
         """Toggle chat panel visibility."""
-        self.chat_widget.toggle()
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
+        x_pos = max(0, sw - SIZE - 26)
 
-        if self.chat_widget.is_expanded:
-            # Expand window to show chat
-            x = max(0, sw - SIZE - 26)
-            y = max(0, sh - 500)  # Show more of the chat panel
-            self.root.geometry(f"{SIZE}x500+{x}+{y}")
+        if self.chat_widget_visible:
+            # Hide chat
+            self.chat_container.pack_forget()
+            self.root.geometry(f"{SIZE}x{SIZE + BUTTON_SIZE + 10}+{x_pos}+72")
+            self.chat_widget_visible = False
         else:
-            # Collapse back to small size
-            x = max(0, sw - SIZE - 26)
-            y = 72
-            self.root.geometry(f"{SIZE}x{SIZE+50}+{x}+{y}")
+            # Show chat
+            self.chat_container.pack(side="top", fill="both", expand=True, padx=0, pady=0)
+            # Expand window to show chat
+            y_pos = max(0, sh - 450)
+            self.root.geometry(f"{SIZE}x450+{x_pos}+{y_pos}")
+            self.chat_widget_visible = True
+            self.chat_widget.input_field.focus()
 
 
 def main():
