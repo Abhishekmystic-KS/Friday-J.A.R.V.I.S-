@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import queue
 import re
 import shutil
 import subprocess
@@ -100,11 +101,7 @@ def play_start_sound():
         play_mp3(start_sound)
 
 
-def speak(text, tts_voice):
-    if not text:
-        return
-
-    print("[tts]", text)
+def synthesize_edge_tts_to_mp3(text, tts_voice):
     with tempfile.NamedTemporaryFile(prefix="jarvis_tts_", suffix=".mp3", delete=False) as tmp:
         audio_path = tmp.name
 
@@ -112,14 +109,122 @@ def speak(text, tts_voice):
         comm = edge_tts.Communicate(text=text, voice=tts_voice)
         await comm.save(audio_path)
 
+    asyncio.run(build_audio())
+    return audio_path
+
+
+def benchmark_tts_provider(provider, sample_text, tts_voice):
+    t0 = time.perf_counter()
+    if provider == "edge":
+        audio_path = None
+        try:
+            audio_path = synthesize_edge_tts_to_mp3(sample_text, tts_voice)
+            return (time.perf_counter() - t0) * 1000
+        except Exception:
+            return None
+        finally:
+            if isinstance(audio_path, str) and os.path.exists(audio_path):
+                os.remove(audio_path)
+
+    if provider == "espeak":
+        if not shutil.which("espeak"):
+            return None
+        wav_path = None
+        try:
+            with tempfile.NamedTemporaryFile(prefix="jarvis_espeak_", suffix=".wav", delete=False) as tmp:
+                wav_path = tmp.name
+            subprocess.run(
+                ["espeak", "-w", wav_path, sample_text],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+            return (time.perf_counter() - t0) * 1000
+        except Exception:
+            return None
+        finally:
+            if isinstance(wav_path, str) and os.path.exists(wav_path):
+                os.remove(wav_path)
+
+    return None
+
+
+def select_tts_provider(tts_provider, tts_voice, benchmark_text, logger, verbose=False):
+    preferred = (tts_provider or "edge").strip().lower()
+    if preferred in {"edge", "espeak"}:
+        if preferred == "espeak" and not shutil.which("espeak"):
+            print("[tts] espeak not found, falling back to edge")
+            logger.info("tts_provider_fallback=espeak_missing")
+            return "edge"
+        return preferred
+
+    if preferred != "auto":
+        return "edge"
+
+    candidates = ["edge", "espeak"]
+    timings = {}
+    for provider in candidates:
+        ms = benchmark_tts_provider(provider, benchmark_text, tts_voice)
+        if ms is not None:
+            timings[provider] = ms
+
+    if not timings:
+        return "edge"
+
+    chosen = min(timings, key=timings.get)
+    timing_text = ", ".join(f"{name}={value:.0f}ms" for name, value in timings.items())
+    if verbose:
+        print(f"[tts] auto selected {chosen} ({timing_text})")
+        logger.info("tts_auto_selected=%s timings=%s", chosen, timing_text)
+    return chosen
+
+
+def speak(text, tts_voice, tts_provider, logger, latency_logging_enabled):
+    if not text:
+        return
+
+    if latency_logging_enabled:
+        print(f"[tts/{tts_provider}]", text)
+    t0 = time.perf_counter()
+    synth_ms = 0.0
+    play_ms = 0.0
+    played = False
+
     try:
-        asyncio.run(build_audio())
-        play_mp3(audio_path)
+        if tts_provider == "espeak":
+            t_play = time.perf_counter()
+            subprocess.run(
+                ["espeak", "-s", "170", text],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+            play_ms = (time.perf_counter() - t_play) * 1000
+            played = True
+        else:
+            audio_path = None
+            try:
+                t_synth = time.perf_counter()
+                audio_path = synthesize_edge_tts_to_mp3(text, tts_voice)
+                synth_ms = (time.perf_counter() - t_synth) * 1000
+
+                t_play = time.perf_counter()
+                played = play_mp3(audio_path)
+                play_ms = (time.perf_counter() - t_play) * 1000
+            finally:
+                if isinstance(audio_path, str) and os.path.exists(audio_path):
+                    os.remove(audio_path)
     except Exception as exc:
         print("TTS error:", exc)
-    finally:
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+
+    total_ms = (time.perf_counter() - t0) * 1000
+    if latency_logging_enabled:
+        msg = (
+            f"[latency] tts provider={tts_provider} total={total_ms:.0f}ms "
+            f"synth={synth_ms:.0f}ms play={play_ms:.0f}ms played={played}"
+        )
+        print(msg)
+        logger.info(msg)
 
 
 def is_process_running(proc):
@@ -263,6 +368,108 @@ def get_llm_response(client, llm_model, history, user_text, max_history):
     return reply
 
 
+def pop_complete_sentences(buffer):
+    sentences = []
+    while True:
+        match = re.search(r"[.!?](?:\s+|$)", buffer)
+        if not match:
+            break
+
+        end = match.end()
+        sentence = buffer[:end].strip()
+        buffer = buffer[end:].lstrip()
+        if sentence:
+            sentences.append(sentence)
+
+    return sentences, buffer
+
+
+def stream_llm_response_and_speak(
+    client,
+    llm_model,
+    history,
+    user_text,
+    max_history,
+    tts_voice,
+    tts_provider,
+    logger,
+    latency_logging_enabled,
+):
+    history.append({"role": "user", "content": user_text})
+
+    stop_token = object()
+    tts_queue = queue.Queue()
+
+    def tts_worker():
+        while True:
+            item = tts_queue.get()
+            try:
+                if item is stop_token:
+                    return
+                speak(item, tts_voice, tts_provider, logger, latency_logging_enabled)
+            finally:
+                tts_queue.task_done()
+
+    worker = threading.Thread(target=tts_worker, daemon=True)
+    worker.start()
+
+    reply = ""
+    buffer = ""
+    t0 = time.perf_counter()
+
+    try:
+        stream = client.chat.completions.create(
+            model=llm_model,
+            messages=history,
+            max_tokens=120,
+            temperature=0.7,
+            stream=True,
+        )
+        for chunk in stream:
+            delta = ""
+            try:
+                delta = chunk.choices[0].delta.content or ""
+            except Exception:
+                delta = ""
+
+            if not delta:
+                continue
+
+            reply += delta
+            buffer += delta
+
+            sentences, buffer = pop_complete_sentences(buffer)
+            for sentence in sentences:
+                tts_queue.put(sentence)
+
+        tail = buffer.strip()
+        if tail:
+            tts_queue.put(tail)
+    except Exception as exc:
+        print("LLM error:", exc)
+        logger.exception("llm_stream_error")
+        if not reply:
+            reply = "Sorry, I could not process that."
+            tts_queue.put(reply)
+
+    tts_queue.put(stop_token)
+    tts_queue.join()
+    worker.join(timeout=1.0)
+
+    reply = reply.strip() or "Sorry, I could not process that."
+    history.append({"role": "assistant", "content": reply})
+    if len(history) > max_history + 1:
+        history[:] = history[:1] + history[-max_history:]
+
+    if latency_logging_enabled:
+        llm_stream_ms = (time.perf_counter() - t0) * 1000
+        msg = f"[latency] llm_stream_total={llm_stream_ms:.0f}ms"
+        print(msg)
+        logger.info(msg)
+
+    return reply
+
+
 def run_assistant():
     config = load_config()
     logger = setup_logger(config["log_file"])
@@ -276,6 +483,15 @@ def run_assistant():
     wake_cooldown = int(config["wake_cooldown_seconds"])
     max_history = int(config["max_history_messages"])
     tts_voice = str(config["tts_voice"])
+    denoise_enabled = bool(config.get("denoise_enabled", False))
+    latency_logging_enabled = bool(config.get("latency_logging_enabled", True))
+    tts_provider = select_tts_provider(
+        str(config.get("tts_provider", "auto")),
+        tts_voice,
+        str(config.get("tts_benchmark_text", "System ready. This is a latency check.")),
+        logger,
+        latency_logging_enabled,
+    )
 
     api_key = load_api_key()
     client = Groq(api_key=api_key)
@@ -290,6 +506,8 @@ def run_assistant():
     print("Assistant started")
     print("Wake words:", ", ".join(wake_phrases))
     print("Sleep phrases:", ", ".join(sleep_phrases))
+    print("Denoise enabled:", denoise_enabled)
+    print("TTS provider:", tts_provider)
 
     # Start with idle orb visible.
     orb_process = launch_orb()
@@ -312,14 +530,36 @@ def run_assistant():
                     robo_process = launch_robo_popup(robo_process)
                     if not is_process_running(robo_process):
                         orb_process = launch_orb(orb_process)
-                    speak("Hotkey received. I am ready.", tts_voice)
+                    speak(
+                        "Hotkey received. I am ready.",
+                        tts_voice,
+                        tts_provider,
+                        logger,
+                        latency_logging_enabled,
+                    )
                     continue
 
                 if not wav_path:
                     continue
 
-                clean_path = denoise_wav(wav_path)
-                text = transcribe(client, clean_path, stt_model)
+                stt_input_path = wav_path
+                if denoise_enabled:
+                    t_denoise = time.perf_counter()
+                    clean_path = denoise_wav(wav_path)
+                    stt_input_path = clean_path
+                    if latency_logging_enabled:
+                        denoise_ms = (time.perf_counter() - t_denoise) * 1000
+                        msg = f"[latency] denoise={denoise_ms:.0f}ms"
+                        print(msg)
+                        logger.info(msg)
+
+                t_stt = time.perf_counter()
+                text = transcribe(client, stt_input_path, stt_model)
+                if latency_logging_enabled:
+                    stt_ms = (time.perf_counter() - t_stt) * 1000
+                    msg = f"[latency] stt={stt_ms:.0f}ms"
+                    print(msg)
+                    logger.info(msg)
                 if not text:
                     continue
 
@@ -333,7 +573,7 @@ def run_assistant():
                     robo_process = stop_process(robo_process)
                     orb_process = launch_orb(orb_process)
                     sleep_msg = "Going to sleep. Say friday or hey friday to wake me."
-                    speak(sleep_msg, tts_voice)
+                    speak(sleep_msg, tts_voice, tts_provider, logger, latency_logging_enabled)
                     logger.info("assistant=%s", sleep_msg)
                     continue
 
@@ -345,7 +585,13 @@ def run_assistant():
                         robo_process = launch_robo_popup(robo_process)
                         if not is_process_running(robo_process):
                             orb_process = launch_orb(orb_process)
-                        speak("I am awake. How can I help?", tts_voice)
+                        speak(
+                            "I am awake. How can I help?",
+                            tts_voice,
+                            tts_provider,
+                            logger,
+                            latency_logging_enabled,
+                        )
                         last_wake = now
                     continue
 
@@ -356,20 +602,29 @@ def run_assistant():
                         robo_process = launch_robo_popup(robo_process)
                         if not is_process_running(robo_process):
                             orb_process = launch_orb(orb_process)
-                        speak("I am here. How can I help?", tts_voice)
+                        speak(
+                            "I am here. How can I help?",
+                            tts_voice,
+                            tts_provider,
+                            logger,
+                            latency_logging_enabled,
+                        )
                         last_wake = now
                     continue
 
-                response = get_llm_response(
+                response = stream_llm_response_and_speak(
                     client,
                     llm_model,
                     history,
                     text,
                     max_history,
+                    tts_voice,
+                    tts_provider,
+                    logger,
+                    latency_logging_enabled,
                 )
                 print("JARVIS:", response)
                 logger.info("assistant=%s", response)
-                speak(response, tts_voice)
             except Exception as exc:
                 print("Voice error:", exc)
                 logger.exception("voice_error")
