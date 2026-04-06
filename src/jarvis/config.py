@@ -20,10 +20,6 @@ DEFAULT_CONFIG = {
     "hotkey_enabled": False,
     "hotkey_combo": "<ctrl>+<alt>+j",
     "log_file": "data/logs/conversation.log",
-    "memory_enabled": True,
-    "memory_db_path": "data/memory/chroma",
-    "memory_collection": "jarvis_memory",
-    "memory_top_k": 3,
 }
 
 

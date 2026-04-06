@@ -21,7 +21,7 @@ This is a voice assistant project in progress.
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install groq python-dotenv sounddevice soundfile numpy webrtcvad noisereduce edge-tts pynput chromadb
+pip install groq python-dotenv sounddevice soundfile numpy webrtcvad noisereduce edge-tts pynput
 pip install "setuptools<81"
 ```
 
@@ -41,13 +41,11 @@ python scripts/run_assistant.py
 
 - Wake: `friday`, `hey friday`, `wake up`
 - Sleep: `go to sleep friday`
-- Memory: `remember my name is ...`, `what do you remember`
 
 ## Notes
 
 - Project is still being improved.
 - Logs: [data/logs](data/logs)
-- Memory DB: [data/memory](data/memory)
 
 Current goal:
 - listen from mic
@@ -70,7 +68,7 @@ Current goal:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install groq python-dotenv sounddevice soundfile numpy webrtcvad noisereduce edge-tts pynput chromadb
+pip install groq python-dotenv sounddevice soundfile numpy webrtcvad noisereduce edge-tts pynput
 pip install "setuptools<81"
 ```
 
@@ -90,10 +88,8 @@ python scripts/run_assistant.py
 
 - Wake: `friday`, `hey friday`, `wake up`
 - Sleep: `go to sleep friday`
-- Memory: `remember my name is ...`, `what do you remember`
 
 ## Notes
 
 - Project is still being improved.
 - Logs: [data/logs](data/logs)
-- Memory DB: [data/memory](data/memory)

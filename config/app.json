@@ -20,9 +20,5 @@
   "system_prompt": "You are Jarvis, a witty AI assistant. Keep responses short and punchy (1-2 sentences).",
   "hotkey_enabled": false,
   "hotkey_combo": "<ctrl>+<alt>+j",
-  "log_file": "data/logs/conversation.log",
-  "memory_enabled": true,
-  "memory_db_path": "data/memory/chroma",
-  "memory_collection": "jarvis_memory",
-  "memory_top_k": 3
+  "log_file": "data/logs/conversation.log"
 }
