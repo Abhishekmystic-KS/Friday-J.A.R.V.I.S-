@@ -1,0 +1,32 @@
+# GitHub Profile: Abhishekmystic-KS
+
+Name: Abhishek
+Bio: AI/ML |GenAI | RAG  
+Go Beyond the Universe
+Location: Bengaluru
+Company: None
+Public repos: 19
+Followers: 5
+Profile URL: https://github.com/Abhishekmystic-KS
+
+## Repositories
+
+- Friday-J.A.R.V.I.S- (Python, *1): An advanced voice-activated assistant designed for local system automation and cloud-service integration. This project implements an Agentic Workflow using a decoupled architecture: | topics: none | https://github.com/Abhishekmystic-KS/Friday-J.A.R.V.I.S-
+- Enhanced_Facial_Expression_and_Hand_Gesture_recognition_System (Python, *3): The *Enhanced Facial Expression and Hand Gesture Recognition System* is a real-time Python application that detects and recognizes facial expressions and hand gestures using a webcam. It leverages powerful libraries like OpenCV, MediaPipe, and Scikit-learn for advanced landmark tracking, gesture classification, and expression recognition. | topics: none | https://github.com/Abhishekmystic-KS/Enhanced_Facial_Expression_and_Hand_Gesture_recognition_System
+- n8n_Ai_Agents (Unknown, *0): GalaxyEye multi-agent n8n workflow that routes user requests (chat, coding, tasks, file analysis, and reasoning) to specialized Gemini-powered agents via a webhook. | topics: none | https://github.com/Abhishekmystic-KS/n8n_Ai_Agents
+- PRODIGY_GA_04 (Jupyter Notebook, *0): Implemented a pix2pix Conditional GAN (cGAN) for architectural Image-to-Image translation. Developed a U-Net Generator with skip-connections and a PatchGAN Discriminator to map semantic labels to photorealistic building facades. Optimized using PyTorch with custom L1-adversarial loss balancing. | topics: none | https://github.com/Abhishekmystic-KS/PRODIGY_GA_04
+- PRODIGY_GA_03 (Jupyter Notebook, *0): Developed a statistical text generation engine using Markov Chains. Implemented a stochastic process where the probability of each word depends solely on the current state. Built a custom Python dictionary-based transition map to mimic the linguistic style of large datasets like the Tiny Shakespeare corpus. | topics: none | https://github.com/Abhishekmystic-KS/PRODIGY_GA_03
+- PRODIGY_GA_02 (Jupyter Notebook, *0):     2 successful queries  Implemented a Text-to-Image Synthesis system using Stable Diffusion v1.5 via the Hugging Face diffusers library. Leveraged Latent Diffusion and Reverse Denoising to generate high-fidelity 512x512 images from natural language prompts. Optimized inference on a T4 GPU using torch.float16 for rapid image generation. | topics: none | https://github.com/Abhishekmystic-KS/PRODIGY_GA_02
+- Location_Tracker (HTML, *0): it help to check the location of the intended user  | topics: none | https://github.com/Abhishekmystic-KS/Location_Tracker
+- PRODIGY_GA_01 (Jupyter Notebook, *0): Fine-tuned a GPT-2 transformer model on a custom dataset of 40,000+ lines of Shakespearean text. The project focuses on stylistic text generation, adapting the base model to mimic specific structural and linguistic patterns. Achieved significant training loss reduction using a Hugging Face pipeline. | topics: none | https://github.com/Abhishekmystic-KS/PRODIGY_GA_01
+- Abhishekmystic-KS (Jupyter Notebook, *2): No description | topics: none | https://github.com/Abhishekmystic-KS/Abhishekmystic-KS
+- keylogger-telegram (Python, *0): A Python-based keystroke logger that monitors keyboard input and sends captured keystrokes to Telegram via bot API. Features real-time notification delivery and global logging control. Built with pynput for cross-platform keyboard monitoring | topics: none | https://github.com/Abhishekmystic-KS/keylogger-telegram
+- CamCaptureProgram (HTML, *0): No description | topics: none | https://github.com/Abhishekmystic-KS/CamCaptureProgram
+- Medical-Image-Retrieval (Python, *1): AI-powered medical X-ray search engine using deep learning. Upload or search X-ray images to find similar cases across chest, spine, skull, fracture, and dental categories. Features automatic anatomy detection and TF-IDF text search. | topics: none | https://github.com/Abhishekmystic-KS/Medical-Image-Retrieval
+- ai-image-restoration (Jupyter Notebook, *1): AI-powered image restoration app using ESRGAN deep learning model. Upload old, damaged, or low-resolution photos and restore them with cutting-edge super-resolution technology. Built with Streamlit, TensorFlow, and TensorFlow Hub. Simple web interface for enhancing and upscaling images instantly. | topics: none | https://github.com/Abhishekmystic-KS/ai-image-restoration
+- UnifiedChain-ID (TypeScript, *0):   A blockchain-based wallet system that allows users to create and manage digital identities across multiple blockchain networks with enhanced security and privacy. This platform gives you a foreground in blockchain of all the other wallets where we authenticate the other wallets on behalf of them | topics: none | https://github.com/Abhishekmystic-KS/UnifiedChain-ID
+- Packet_sniffer (Python, *2): This Python script captures and logs network packets, monitors traffic for suspicious IPs, and injects ARP spoofing packets. It also provides real-time network statistics to analyze protocol usage. Designed for security analysis | topics: none | https://github.com/Abhishekmystic-KS/Packet_sniffer
+- Network_Scanner (Python, *2): No description | topics: none | https://github.com/Abhishekmystic-KS/Network_Scanner
+- amazon-clone (HTML, *2): Amazon Clone   This project is a simplified Amazon clone featuring a responsive front page built with HTML and CSS. It include a clean design and navigation bar for easy access to product categories. Explore the code to see how I implemented the layout and styling! | topics: none | https://github.com/Abhishekmystic-KS/amazon-clone
+- SysAura (TypeScript, *3): SysAura is a real-time system monitoring app with a React frontend and Node.js backend. It features user authentication, role-based access, system management, alerts, and live updates via WebSockets. The responsive UI includes dark mode for seamless monitoring across devices. | topics: none | https://github.com/Abhishekmystic-KS/SysAura
+- Password_Strength_Checker (JavaScript, *1): A simple web application that evaluates password strength using JavaScript.   It provides real-time feedback and suggests strong passwords for better security.   Built with HTML, CSS, and JavaScript for an interactive user experience. | topics: none | https://github.com/Abhishekmystic-KS/Password_Strength_Checker

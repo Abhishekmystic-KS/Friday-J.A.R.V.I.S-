@@ -18,3 +18,8 @@ data/logs/
 video_Ani/robo_*.gif
 video_Ani/*_palette.png
 video_Ani/robo_frames_*/
+
+.venv/
+RAG/store/
+__pycache__/
+*.log

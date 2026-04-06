@@ -2,8 +2,10 @@
   "sample_rate": 16000,
   "channels": 1,
   "record_seconds": 3,
+  "llm_provider": "groq",
   "stt_model": "whisper-large-v3-turbo",
   "llm_model": "llama-3.1-8b-instant",
+  "bytez_model": "openai/gpt-4o",
   "wake_phrases": [
     "friday",
     "hey friday",

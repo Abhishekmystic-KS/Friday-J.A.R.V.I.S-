@@ -1,0 +1,32 @@
+# GitHub Profile: AkshathaaRk
+
+Name: Akshatha
+Bio: AI/ML | GenAI | LLMs
+Location: None
+Company: None
+Public repos: 22
+Followers: 3
+Profile URL: https://github.com/AkshathaaRk
+
+## Repositories
+
+- n8n-agents (Unknown, *1): No description | topics: none | https://github.com/AkshathaaRk/n8n-agents
+- PRODIGY_GA_04 (Jupyter Notebook, *0): Implemented a pix2pix Conditional GAN (cGAN) for architectural Image-to-Image translation. Developed a U-Net Generator with skip-connections and a PatchGAN Discriminator to map semantic labels to photorealistic building facades. Optimized using PyTorch with custom L1-adversarial loss balancing. | topics: none | https://github.com/AkshathaaRk/PRODIGY_GA_04
+- PRODIGY_GA_03 (Jupyter Notebook, *0): Developed a statistical text generation engine using Markov Chains. Implemented a stochastic process where the probability of each word depends solely on the current state. Built a custom Python dictionary-based transition map to mimic the linguistic style of large datasets like the Tiny Shakespeare corpus. | topics: none | https://github.com/AkshathaaRk/PRODIGY_GA_03
+- PRODIGY_GA_02 (Jupyter Notebook, *0): Implemented a Text-to-Image Synthesis system using Stable Diffusion v1.5 via the Hugging Face diffusers library. Leveraged Latent Diffusion and Reverse Denoising to generate high-fidelity 512x512 images from natural language prompts. Optimized inference on a T4 GPU using torch.float16 for rapid image generation. | topics: none | https://github.com/AkshathaaRk/PRODIGY_GA_02
+- Location-Tracker (Python, *0): GalaxyEye is a Python-based voice-controlled AI assistant with face recognition authentication. It features speech-to-text commands, web UI (Eel), task automation (YouTube, WhatsApp, calls), chatbot integration, and real-time visual feedback. Supports both voice and text input for seamless user interaction. | topics: none | https://github.com/AkshathaaRk/Location-Tracker
+- PRODIGY_GA_01 (Jupyter Notebook, *0): Implemented fine-tuning of the GPT-2 (117M) model using the Hugging Face Trainer API. Preprocessed a 40,000-line Shakespearean corpus, utilizing a T4 GPU to optimize training efficiency. Achieved a 17.9% reduction in training loss, enabling high-fidelity stylistic text generation through nucleus sampling. | topics: none | https://github.com/AkshathaaRk/PRODIGY_GA_01
+- Keylogger (Python, *0): A Python-based keystroke logger that captures keyboard input and sends data to Telegram for remote monitoring. Control logging in real-time via Telegram bot with start/stop buttons. Includes Windows startup persistence for automatic execution on system boot. | topics: none | https://github.com/AkshathaaRk/Keylogger
+- Camera-Capture (HTML, *0): Telegram Camera Bot - Remote camera control via Telegram. Capture photos continuously or record videos (10/30s) from your device's camera. Interactive button-based menu. Media automatically sent to Telegram. Built with Python, OpenCV & Telegram Bot API. | topics: none | https://github.com/AkshathaaRk/Camera-Capture
+- Medical-Xray-Search (Python, *1): An intelligent medical imaging retrieval system that enables radiologists and  healthcare professionals to find similar X-ray cases using visual or text queries.  Combines CNNs for image similarity with NLP for metadata search. Built with Streamlit. | topics: none | https://github.com/AkshathaaRk/Medical-Xray-Search
+- Akshatha-Portfolio (TypeScript, *0): Portfolio | topics: none | https://github.com/AkshathaaRk/Akshatha-Portfolio
+- AI-Image-Super-Resolution (Python, *0): Enhance your low-resolution images with AI-powered super-resolution using this web app powered by EDSR and Streamlit. Upload your photos to apply 4x upscaling and save the enhanced results with a click! | topics: none | https://github.com/AkshathaaRk/AI-Image-Super-Resolution
+- AkshathaaRk (Unknown, *2): No description | topics: none | https://github.com/AkshathaaRk/AkshathaaRk
+- Sahaayak--The-AI-Tutor (Python, *0): Sahaayak is an AI-powered tutor designed for Indian classrooms, supporting students and teachers. It leverages MCP servers and advanced APIs for real-time, interactive learning experiences. Features include multilingual chat, voice, image, PDF, and link analysis for personalized education. Built with a Python (Flask)  | topics: none | https://github.com/AkshathaaRk/Sahaayak--The-AI-Tutor
+- UnifiedChainID (TypeScript, *1): No description | topics: none | https://github.com/AkshathaaRk/UnifiedChainID
+- SysAura (TypeScript, *2): SysAura is a real-time system monitoring app with a React frontend and Node.js backend. It features user authentication, role-based access, system management, alerts, and live updates via WebSockets. The responsive UI includes dark mode for seamless monitoring across devices. | topics: none | https://github.com/AkshathaaRk/SysAura
+- Password-Strength-Checker (JavaScript, *2): A simple web application that evaluates password strength using JavaScript.   It provides real-time feedback and suggests strong passwords for better security.   Built with HTML, CSS, and JavaScript for an interactive user experience. | topics: none | https://github.com/AkshathaaRk/Password-Strength-Checker
+- Packet-sniffing (Python, *2): This Python script captures and logs network packets, monitors traffic for suspicious IPs, and injects ARP spoofing packets. It also provides real-time network statistics to analyze protocol usage. Designed for security analysis | topics: none | https://github.com/AkshathaaRk/Packet-sniffing
+- Network-Scanner (Python, *2): No description | topics: none | https://github.com/AkshathaaRk/Network-Scanner
+- amazonclone (HTML, *2): Amazon clone This project is a simplified Amazon clone featuring a responsive front page built with HTML and CSS. It includes a clean design and a navigation bar for easy access to product categories. Explore the code to see how I implemented the layout and styling! | topics: none | https://github.com/AkshathaaRk/amazonclone
+- Enhanced-Facial-Expressions-and-Hand-Gestures-Recognition-System (Python, *1): The *Enhanced Facial Expression and Hand Gesture Recognition System* is a real-time Python application that detects and recognizes facial expressions and hand gestures using a webcam. It leverages powerful libraries like OpenCV, MediaPipe, and Scikit-learn for advanced landmark tracking, gesture classification, and expression recognition | topics: none | https://github.com/AkshathaaRk/Enhanced-Facial-Expressions-and-Hand-Gestures-Recognition-System
