@@ -1,16 +1,25 @@
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tkinter as tk
 
+# Add src to path for imports
+SRC_DIR = Path(__file__).resolve().parents[2]
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from jarvis.ui.chat_widget import ChatWidget
+
 ROOT = Path(__file__).resolve().parents[3]
-VIDEO_DIR = ROOT / "video_Ani"
+VIDEO_DIR = ROOT / "assets" / "media" / "animations"
 MP4_PATH = VIDEO_DIR / "robo.mp4"
 SIZE = 320
 FPS = 24
 CROP_SIZE = 640
 FRAMES_DIR = VIDEO_DIR / f"robo_frames_{SIZE}_v1"
 BG_KEY = "#06090f"
+BUTTON_SIZE = 32
 
 
 def ensure_frames():
@@ -62,8 +71,33 @@ class RoboPopupApp:
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
 
-        self.label = tk.Label(root, bg=BG_KEY, bd=0, highlightthickness=0)
+        # Main container for animation + button
+        main_frame = tk.Frame(root, bg=BG_KEY)
+        main_frame.pack(fill="both", expand=True)
+
+        # Animation label
+        self.label = tk.Label(main_frame, bg=BG_KEY, bd=0, highlightthickness=0)
         self.label.pack(fill="both", expand=True)
+
+        # Button frame (below animation)
+        button_frame = tk.Frame(main_frame, bg=BG_KEY, height=BUTTON_SIZE)
+        button_frame.pack(fill="x", padx=5, pady=5)
+        button_frame.pack_propagate(False)
+
+        # Chat toggle button
+        self.chat_btn = tk.Button(
+            button_frame,
+            text="💬",
+            command=self.toggle_chat,
+            bg="#0d0d0d",
+            fg="#00ff00",
+            font=("Mono", 14),
+            relief="flat",
+            bd=1,
+            width=3,
+            height=1,
+        )
+        self.chat_btn.pack(side="left", padx=2)
 
         self.drag_offset_x = 0
         self.drag_offset_y = 0
@@ -74,6 +108,10 @@ class RoboPopupApp:
         self.index = 0
         self.delay_ms = int(1000 / FPS)
 
+        # Chat widget (initially hidden)
+        self.chat_widget = ChatWidget(root, height=200)
+        self.chat_widget.collapse()
+
         self.load_frames()
         self.position_window()
         self.animate()
@@ -81,9 +119,12 @@ class RoboPopupApp:
     def position_window(self):
         self.root.update_idletasks()
         sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        # Window height = animation size + button + chat (when expanded)
+        # For now, set reasonable min height, window expands as needed
         x = max(0, sw - SIZE - 26)
         y = 72
-        self.root.geometry(f"{SIZE}x{SIZE}+{x}+{y}")
+        self.root.geometry(f"{SIZE}x{SIZE+50}+{x}+{y}")
 
     def _bind_drag(self, widget):
         widget.bind("<ButtonPress-1>", self.start_drag)
@@ -128,6 +169,23 @@ class RoboPopupApp:
             self.label.configure(image=self.frames[self.index], text="")
             self.index = (self.index + 1) % len(self.frames)
         self.root.after(self.delay_ms, self.animate)
+
+    def toggle_chat(self):
+        """Toggle chat panel visibility."""
+        self.chat_widget.toggle()
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+
+        if self.chat_widget.is_expanded:
+            # Expand window to show chat
+            x = max(0, sw - SIZE - 26)
+            y = max(0, sh - 500)  # Show more of the chat panel
+            self.root.geometry(f"{SIZE}x500+{x}+{y}")
+        else:
+            # Collapse back to small size
+            x = max(0, sw - SIZE - 26)
+            y = 72
+            self.root.geometry(f"{SIZE}x{SIZE+50}+{x}+{y}")
 
 
 def main():
