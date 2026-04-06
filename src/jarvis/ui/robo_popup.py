@@ -86,17 +86,21 @@ class RoboPopupApp:
         # Chat button
         self.chat_btn = tk.Button(
             button_frame,
-            text="💬 Chat",
+            text="✨ Chat",
             command=self.open_chat,
-            bg="#0d0d0d",
-            fg="#00ff00",
-            font=("Mono", 10, "bold"),
+            bg="#89b4fa",
+            fg="#11111b",
+            activebackground="#b4befe",
+            activeforeground="#11111b",
+            font=("Helvetica", 10, "bold"),
             relief="flat",
-            bd=1,
-            padx=10,
+            borderwidth=0,
+            highlightthickness=0,
+            cursor="hand2",
+            padx=15,
             pady=5,
         )
-        self.chat_btn.pack(side="left", padx=2)
+        self.chat_btn.pack(side="left", padx=5)
 
         self.drag_offset_x = 0
         self.drag_offset_y = 0

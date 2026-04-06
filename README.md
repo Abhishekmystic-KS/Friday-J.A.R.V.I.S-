@@ -1,6 +1,6 @@
 # J.A.R.V.I.S 
 
-This is a voice assistant project with voice wake-word detection, STT, LLM, and TTS. Also includes a RAG knowledge base chat interface.
+This is a voice assistant project with voice wake-word detection, STT, LLM, and TTS. It also includes a standalone RAG knowledge base chat window.
 
 ## Main Files
 
@@ -9,8 +9,8 @@ This is a voice assistant project with voice wake-word detection, STT, LLM, and 
 - [scripts/run_robo.py](scripts/run_robo.py) — run robo popup animation only
 - [src/jarvis/assistant.py](src/jarvis/assistant.py) — assistant core logic
 - [src/jarvis/ui/orb_popup.py](src/jarvis/ui/orb_popup.py) — orb animation UI
-- [src/jarvis/ui/robo_popup.py](src/jarvis/ui/robo_popup.py) — robo popup + chat widget
-- [src/jarvis/ui/chat_widget.py](src/jarvis/ui/chat_widget.py) — RAG knowledge base chat
+- [src/jarvis/ui/robo_popup.py](src/jarvis/ui/robo_popup.py) — robo popup launcher
+- [src/jarvis/ui/chat_window.py](src/jarvis/ui/chat_window.py) — standalone RAG knowledge base chat window
 - [config/app.json](config/app.json) — settings
 - [env/.env](env/.env) — API keys
 
@@ -29,7 +29,7 @@ pip install "setuptools<81"
 
 ### Optional: RAG Knowledge Base Chat
 
-For the robo popup's embedded chat feature, install RAG dependencies:
+For the standalone chat window, install RAG dependencies:
 
 ```bash
 pip install chromadb langchain-text-splitters requests
@@ -56,16 +56,18 @@ GITHUB_TOKEN=your_github_token_here  # Optional, for RAG GitHub integration
 python scripts/run_assistant.py
 ```
 
-**Robo Popup (with chat widget):**
+**Robo Popup:**
 ```bash
 python scripts/run_robo.py
 ```
+
+Then click the 💬 Chat button to open the separate RAG chat window.
 
 ## Voice Commands
 
 - **Wake**: `friday`, `hey friday`, `wake up`
 - **Sleep**: `go to sleep friday`
-- **Chat**: Click 💬 button on robo popup to query knowledge base
+- **Chat**: Click the 💬 Chat button on the robo popup to open the separate knowledge base window
 
 ## Features
 
@@ -73,7 +75,7 @@ python scripts/run_robo.py
 - **LLM**: Groq Llama 3.1-8b-instant with streaming
 - **Text-to-Speech**: edge-tts (Microsoft) or espeak (offline, auto-selected based on speed)
 - **Voice Activity Detection**: WebRTC VAD with 15-block silence threshold
-- **UI**: Draggable orb and robo animations
+- **UI**: Draggable orb and robo animations, plus a separate chat window
 - **RAG**: Knowledge base chat with ChromaDB vector search + semantic similarity fallback
 
 ## Architecture
