@@ -119,6 +119,7 @@ class RoboPopupApp:
         # Create chat widget inside container
         self.chat_widget = ChatWidget(self.chat_container, height=200)
         self.chat_widget_visible = False
+        self.is_dragging = False
 
         self.load_frames()
         self.position_window()
@@ -136,12 +137,20 @@ class RoboPopupApp:
     def _bind_drag(self, widget):
         widget.bind("<ButtonPress-1>", self.start_drag)
         widget.bind("<B1-Motion>", self.on_drag)
+        widget.bind("<ButtonRelease-1>", self.stop_drag)
 
     def start_drag(self, event):
+        # Don't drag if clicking on button
+        if event.widget == self.chat_btn:
+            return
         self.drag_offset_x = event.x_root - self.root.winfo_x()
         self.drag_offset_y = event.y_root - self.root.winfo_y()
+        self.is_dragging = True
 
     def on_drag(self, event):
+        if not hasattr(self, 'is_dragging') or not self.is_dragging:
+            return
+            
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
 
@@ -149,12 +158,18 @@ class RoboPopupApp:
         y = event.y_root - self.drag_offset_y
 
         max_x = max(0, sw - SIZE)
-        max_y = max(0, sh - (SIZE + BUTTON_SIZE + 10))
+        
+        # Get current window height (maintain it during drag)
+        current_height = self.root.winfo_height()
+        max_y = max(0, sh - current_height)
 
         x = min(max(0, x), max_x)
         y = min(max(0, y), max_y)
 
-        self.root.geometry(f"{SIZE}x{SIZE + BUTTON_SIZE + 10}+{x}+{y}")
+        self.root.geometry(f"{SIZE}x{current_height}+{x}+{y}")
+
+    def stop_drag(self, event):
+        self.is_dragging = False
 
     def load_frames(self):
         if not ensure_frames():
