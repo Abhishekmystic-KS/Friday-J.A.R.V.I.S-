@@ -16,7 +16,7 @@ This is a voice assistant project with voice wake-word detection, STT, LLM, and 
 
 ## Demo Video
 
-<video src="https://github.com/user-attachments/assets/7e8b4e7e-483a-4980-830c-d86b58c324cf" controls width="100%"></video>
+<video src="https://github.com/Abhishekmystic-KS/Friday-J.A.R.V.I.S-/blob/e6d3583cf41e240720f0ac3365b8521492e0c4ed/assets/media/demo/demovideo.mp4" controls width="100%"></video>
 
 ## Quick Setup
 
