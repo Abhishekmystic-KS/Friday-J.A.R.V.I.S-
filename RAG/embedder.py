@@ -1,31 +1,41 @@
 from __future__ import annotations
 
-import hashlib
-
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
 
-class SimpleHashEmbedder:
-	"""Deterministic lightweight embedder used when no model backend is configured."""
+class SentenceTransformerEmbedder:
+	"""Pretrained SentenceTransformer embedder using all-MiniLM-L6-v2 model."""
 
-	def __init__(self, dim: int = 384):
-		self.dim = int(dim)
+	def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+		"""
+		Initialize the embedder with a pretrained model.
+		
+		Args:
+			model_name: HuggingFace model name (default: all-MiniLM-L6-v2)
+				- 22MB, 384-dim, very fast, no GPU needed
+		"""
+		print(f"[Embedder] Loading model: {model_name}...", flush=True)
+		self.model = SentenceTransformer(model_name)
+		print(f"[Embedder] Model loaded. Dimension: {self.model.get_sentence_embedding_dimension()}", flush=True)
 
 	def encode(self, text: str) -> np.ndarray:
-		vec = np.zeros(self.dim, dtype=np.float32)
+		"""
+		Encode text to embedding vector using pretrained neural model.
+		
+		Args:
+			text: Input text to embed
+			
+		Returns:
+			384-dimensional embedding vector as numpy array
+		"""
 		if not text:
-			return vec
-
-		# Hash each token into a stable bucket and accumulate counts.
-		for token in text.lower().split():
-			idx = int(hashlib.md5(token.encode("utf-8")).hexdigest(), 16) % self.dim
-			vec[idx] += 1.0
-
-		norm = float(np.linalg.norm(vec))
-		if norm > 0:
-			vec /= norm
-		return vec
+			return np.zeros(self.model.get_sentence_embedding_dimension(), dtype=np.float32)
+		
+		# Use pretrained model to encode (semantic understanding, not hashing)
+		embedding = self.model.encode(text, convert_to_numpy=True)
+		return embedding
 
 
-def get_embedder() -> SimpleHashEmbedder:
-	return SimpleHashEmbedder()
+def get_embedder() -> SentenceTransformerEmbedder:
+	return SentenceTransformerEmbedder()

@@ -14,7 +14,7 @@
 
  ## 💼 Experience
 
- ### AI Research and Development Intern — Ai4sees Private Ltd
+ ### AI Research and Development Intern — AI4SEES Pvt. Ltd.
 
  📅 Jan 2026 – Present
 
