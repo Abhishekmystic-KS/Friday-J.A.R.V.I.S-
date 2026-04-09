@@ -9,6 +9,7 @@ __pycache__/
 # Local secrets
 env/.env
 data/logs/
+data/memory/agent_memory*.jsonl
 
 # OS/editor
 .DS_Store

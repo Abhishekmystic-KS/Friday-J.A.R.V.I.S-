@@ -25,7 +25,23 @@ DEFAULT_CONFIG = {
     "system_prompt": "You are Jarvis, a witty AI assistant. Keep responses short and punchy (1-2 sentences).",
     "hotkey_enabled": False,
     "hotkey_combo": "<ctrl>+<alt>+j",
+    "agent_enabled": False,
+    "agent_phase": 1,
+    "intent_classifier_mode": "hybrid",
+    "intent_classifier_model": "llama-3.1-8b-instant",
+    "intent_logging_enabled": True,
+    "agent_max_steps": 4,
+    "agent_replan_enabled": True,
+    "agent_use_llm_planner": True,
+    "agent_memory_enabled": True,
+    "agent_memory_file": "data/memory/agent_memory.jsonl",
     "log_file": "data/logs/conversation.log",
+    "voice_ux_barge_in_enabled": True,
+    "voice_ux_confidence_threshold": 0.55,
+    "voice_ux_clarification_on_low_confidence": True,
+    "voice_ux_response_max_lines": 2,
+    "voice_ux_metrics_enabled": False,
+    "voice_ux_filler_patterns": ["uh", "um", "er", "erm", "hmm", "huh", "yeah", "yep", "nope", "ok", "okay", "gotcha", "sure", "right", "what", "huh"],
 }
 
 

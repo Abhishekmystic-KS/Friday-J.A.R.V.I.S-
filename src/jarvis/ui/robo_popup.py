@@ -9,8 +9,6 @@ SRC_DIR = Path(__file__).resolve().parents[2]
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from jarvis.ui.chat_window import launch_chat_window
-
 ROOT = Path(__file__).resolve().parents[3]
 VIDEO_DIR = ROOT / "assets" / "media" / "animations"
 MP4_PATH = VIDEO_DIR / "robo.mp4"
@@ -78,30 +76,6 @@ class RoboPopupApp:
         self.label = tk.Label(self.main_frame, bg=BG_KEY, bd=0, highlightthickness=0)
         self.label.pack(fill="both", expand=True)
 
-        # Button frame (below animation)
-        button_frame = tk.Frame(self.main_frame, bg=BG_KEY, height=40)
-        button_frame.pack(fill="x", padx=5, pady=5)
-        button_frame.pack_propagate(False)
-
-        # Chat button
-        self.chat_btn = tk.Button(
-            button_frame,
-            text="✨ Chat",
-            command=self.open_chat,
-            bg="#89b4fa",
-            fg="#11111b",
-            activebackground="#b4befe",
-            activeforeground="#11111b",
-            font=("Helvetica", 10, "bold"),
-            relief="flat",
-            borderwidth=0,
-            highlightthickness=0,
-            cursor="hand2",
-            padx=15,
-            pady=5,
-        )
-        self.chat_btn.pack(side="left", padx=5)
-
         self.drag_offset_x = 0
         self.drag_offset_y = 0
         self.is_dragging = False
@@ -124,8 +98,8 @@ class RoboPopupApp:
         sw = self.root.winfo_screenwidth()
         x = max(0, sw - SIZE - 26)
         y = 72
-        # Fixed size: animation (320x320) + button (40px) + padding
-        self.root.geometry(f"{SIZE}x370+{x}+{y}")
+        # Fixed size: animation only
+        self.root.geometry(f"{SIZE}x{SIZE}+{x}+{y}")
 
     def start_drag(self, event):
         """Start dragging animation area."""
@@ -145,12 +119,12 @@ class RoboPopupApp:
         y = event.y_root - self.drag_offset_y
 
         max_x = max(0, sw - SIZE)
-        max_y = max(0, sh - 370)
+        max_y = max(0, sh - SIZE)
 
         x = min(max(0, x), max_x)
         y = min(max(0, y), max_y)
 
-        self.root.geometry(f"{SIZE}x370+{x}+{y}")
+        self.root.geometry(f"{SIZE}x{SIZE}+{x}+{y}")
 
     def stop_drag(self, event):
         """Stop dragging."""
@@ -176,11 +150,6 @@ class RoboPopupApp:
             self.label.configure(image=self.frames[self.index], text="")
             self.index = (self.index + 1) % len(self.frames)
         self.root.after(self.delay_ms, self.animate)
-
-    def open_chat(self):
-        """Launch standalone chat window."""
-        launch_chat_window()
-
 
 def main():
     root = tk.Tk()

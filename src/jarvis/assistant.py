@@ -19,13 +19,33 @@ from dotenv import dotenv_values
 from groq import Groq
 from noisereduce import reduce_noise
 
+from jarvis.agent import AgentMemory, build_tool_registry, classify_intent, run_agent_task
 from jarvis.config import ROOT_DIR, load_config
+from jarvis.metrics import VoiceMetrics
 
 HOTKEY_SIGNAL = "__HOTKEY_TRIGGERED__"
 
 
 def normalize_text(text):
     return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def is_filler_speech(text, filler_patterns):
+    """Check if text is mostly filler/noise and should be skipped."""
+    normalized = normalize_text(text)
+    if not normalized:
+        return False
+    
+    # Single word that matches a filler pattern
+    words = normalized.split()
+    if len(words) <= 1 and words[0] in filler_patterns:
+        return True
+    
+    # All words are fillers (e.g., "uh um okay")
+    if all(w in filler_patterns for w in words):
+        return True
+    
+    return False
 
 
 def contains_any(text, phrases):
@@ -384,6 +404,13 @@ def pop_complete_sentences(buffer):
     return sentences, buffer
 
 
+def append_history_turn(history, user_text, assistant_text, max_history):
+    history.append({"role": "user", "content": user_text})
+    history.append({"role": "assistant", "content": assistant_text})
+    if len(history) > max_history + 1:
+        history[:] = history[:1] + history[-max_history:]
+
+
 def stream_llm_response_and_speak(
     client,
     llm_model,
@@ -485,6 +512,16 @@ def run_assistant():
     tts_voice = str(config["tts_voice"])
     denoise_enabled = bool(config.get("denoise_enabled", False))
     latency_logging_enabled = bool(config.get("latency_logging_enabled", True))
+    agent_enabled = bool(config.get("agent_enabled", False))
+    agent_phase = int(config.get("agent_phase", 1))
+    intent_mode = str(config.get("intent_classifier_mode", "hybrid"))
+    intent_model = str(config.get("intent_classifier_model", llm_model))
+    intent_logging_enabled = bool(config.get("intent_logging_enabled", True))
+    agent_max_steps = int(config.get("agent_max_steps", 4))
+    agent_replan_enabled = bool(config.get("agent_replan_enabled", True))
+    agent_use_llm_planner = bool(config.get("agent_use_llm_planner", True))
+    agent_memory_enabled = bool(config.get("agent_memory_enabled", True))
+    agent_memory_file = ROOT_DIR / str(config.get("agent_memory_file", "data/memory/agent_memory.jsonl"))
     tts_provider = select_tts_provider(
         str(config.get("tts_provider", "auto")),
         tts_voice,
@@ -495,6 +532,14 @@ def run_assistant():
 
     api_key = load_api_key()
     client = Groq(api_key=api_key)
+
+    agent_memory = AgentMemory(agent_memory_file)
+    agent_tools = build_tool_registry(agent_memory, ROOT_DIR)
+
+    # Initialize metrics tracking
+    metrics_enabled = bool(config.get("voice_ux_metrics_enabled", False))
+    metrics_file = ROOT_DIR / "data/logs/voice_metrics.jsonl" if metrics_enabled else None
+    voice_metrics = VoiceMetrics(metrics_file)
 
     hotkey_event = threading.Event()
     hotkey_listener = start_hotkey(
@@ -508,6 +553,8 @@ def run_assistant():
     print("Sleep phrases:", ", ".join(sleep_phrases))
     print("Denoise enabled:", denoise_enabled)
     print("TTS provider:", tts_provider)
+    if agent_enabled:
+        print(f"Agent mode: enabled (phase={agent_phase}, intent={intent_mode})")
 
     # Start with idle orb visible.
     orb_process = launch_orb()
@@ -568,6 +615,17 @@ def run_assistant():
                 now = time.time()
                 normalized = normalize_text(text)
 
+                # Skip filler speech (uh, hmm, yeah, etc.)
+                filler_patterns = config.get("voice_ux_filler_patterns", [])
+                if is_filler_speech(text, filler_patterns):
+                    logger.info("filler_skipped=%s", text)
+                    if metrics_enabled:
+                        voice_metrics.log_turn(
+                            user_text=text,
+                            is_filler_skip=True,
+                        )
+                    continue
+
                 if contains_any(normalized, sleep_phrases):
                     is_awake = False
                     robo_process = stop_process(robo_process)
@@ -612,17 +670,96 @@ def run_assistant():
                         last_wake = now
                     continue
 
-                response = stream_llm_response_and_speak(
-                    client,
-                    llm_model,
-                    history,
-                    text,
-                    max_history,
-                    tts_voice,
-                    tts_provider,
-                    logger,
-                    latency_logging_enabled,
-                )
+                intent = {"label": "GENERAL_CHAT", "confidence": 0.0, "method": "default"}
+                confidence_threshold = float(config.get("voice_ux_confidence_threshold", 0.55))
+                clarification_enabled = bool(config.get("voice_ux_clarification_on_low_confidence", True))
+                response_max_lines = int(config.get("voice_ux_response_max_lines", 2))
+                
+                if agent_enabled and agent_phase >= 1:
+                    intent = classify_intent(
+                        text,
+                        mode=intent_mode,
+                        client=client,
+                        model=intent_model,
+                    )
+                    if intent_logging_enabled:
+                        phase_tag = "p1" if agent_phase == 1 else f"p{agent_phase}"
+                        intent_msg = (
+                            f"[agent:{phase_tag}] intent={intent.get('label')} "
+                            f"confidence={intent.get('confidence', 0):.2f} "
+                            f"method={intent.get('method')}"
+                        )
+                        print(intent_msg)
+                        logger.info(intent_msg)
+
+                # Low-confidence clarification: ask user to repeat if confidence too low
+                if agent_enabled and agent_phase >= 1 and clarification_enabled:
+                    conf = float(intent.get("confidence", 0))
+                    if conf < confidence_threshold:
+                        clarify_msg = "Sorry, could you say that again?"
+                        speak(clarify_msg, tts_voice, tts_provider, logger, latency_logging_enabled)
+                        logger.info("clarification=%s confidence=%.2f", clarify_msg, conf)
+                        print("JARVIS:", clarify_msg)
+                        if metrics_enabled:
+                            voice_metrics.log_turn(
+                                user_text=text,
+                                intent_label=intent.get("label"),
+                                intent_confidence=conf,
+                                response_length=len(clarify_msg),
+                                is_clarification=True,
+                            )
+                        continue
+
+                if agent_enabled and agent_phase >= 2:
+                    agent_result = run_agent_task(
+                        text,
+                        str(intent.get("label", "GENERAL_CHAT")),
+                        client=client,
+                        llm_model=llm_model,
+                        tools=agent_tools,
+                        max_steps=agent_max_steps,
+                        replan_enabled=agent_replan_enabled,
+                        use_llm_planner=agent_use_llm_planner,
+                        logger=logger,
+                        response_max_lines=response_max_lines,
+                    )
+                    response = str(agent_result.get("response", "Sorry, I could not process that."))
+                    if agent_memory_enabled:
+                        agent_memory.add_short("user", text)
+                        agent_memory.add_short("assistant", response)
+                        agent_memory.save_long(
+                            "task_trace",
+                            response,
+                            meta={
+                                "intent": intent.get("label"),
+                                "observations": agent_result.get("observations", []),
+                                "plan": agent_result.get("plan", []),
+                            },
+                        )
+
+                    append_history_turn(history, text, response, max_history)
+                    speak(response, tts_voice, tts_provider, logger, latency_logging_enabled)
+                    if metrics_enabled:
+                        voice_metrics.log_turn(
+                            user_text=text,
+                            intent_label=intent.get("label"),
+                            intent_confidence=intent.get("confidence", 0),
+                            response_length=len(response),
+                            tool_used=agent_result.get("plan", [{}])[0].get("tool"),
+                        )
+                else:
+                    response = stream_llm_response_and_speak(
+                        client,
+                        llm_model,
+                        history,
+                        text,
+                        max_history,
+                        tts_voice,
+                        tts_provider,
+                        logger,
+                        latency_logging_enabled,
+                    )
+
                 print("JARVIS:", response)
                 logger.info("assistant=%s", response)
             except Exception as exc:
