@@ -11,20 +11,22 @@ def _llm_answer(client: Any, model: str, user_text: str, observations: list[dict
         f"Step {i+1}: {json.dumps(obs, ensure_ascii=False)}" for i, obs in enumerate(observations)
     )
     prompt = (
-        "You are Jarvis. Provide a concise answer using observations when available.\n"
+        "You are Jarvis. Answer using ONLY the provided observations.\n"
+        "Rules: Do not invent counts, prices, salaries, company names, or job totals unless explicitly present in observations.\n"
+        "If observations are vague or incomplete, say that briefly and report only what is visible.\n"
         f"User: {user_text}\n"
         f"Observations:\n{context}\n"
-        "Respond in 1-3 short sentences."
+        "Respond in 1-2 short factual lines."
     )
 
     try:
         out = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "Be concise and accurate."},
+                {"role": "system", "content": "Be concise, accurate, and strictly observation-grounded."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.4,
+            temperature=0,
             max_tokens=180,
         )
         return (out.choices[0].message.content or "").strip() or "I could not produce an answer."

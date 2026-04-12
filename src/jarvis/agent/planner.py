@@ -24,6 +24,7 @@ def _extract_search_query(text: str) -> str | None:
         m = re.search(p, t, flags=re.IGNORECASE)
         if m:
             q = (m.group(1) or "").strip(" .,!?")
+            q = re.sub(r"^(?:for\s+)?(?:the\s+)?", "", q, flags=re.IGNORECASE).strip()
             if q:
                 return q
     return None
@@ -53,7 +54,11 @@ def heuristic_plan(user_text: str, intent: str | dict[str, Any]) -> list[dict[st
                 return [
                     {"action": "tool", "tool": "open_app", "params": params, "final": False},
                     {"action": "tool", "tool": "web_search", "params": {"query": search_query, "lines": 2}, "final": False},
-                    {"action": "llm", "prompt": "Summarize the search result in 1-2 lines.", "final": True},
+                    {
+                        "action": "llm",
+                        "prompt": "Use ONLY tool observations. Do not invent counts, facts, salaries, or listings. If details are missing, say so briefly.",
+                        "final": True,
+                    },
                 ]
             return [{"action": "tool", "tool": "open_app", "params": params, "final": True}]
 
@@ -62,7 +67,11 @@ def heuristic_plan(user_text: str, intent: str | dict[str, Any]) -> list[dict[st
         return [
             {"action": "tool", "tool": "open_app", "params": {"app": "firefox", "query": query}, "final": False},
             {"action": "tool", "tool": "web_search", "params": {"query": query, "lines": 2}, "final": False},
-            {"action": "llm", "prompt": "Summarize the search result in 1-2 lines.", "final": True},
+            {
+                "action": "llm",
+                "prompt": "Use ONLY tool observations. Do not invent counts, facts, salaries, or listings. If details are missing, say so briefly.",
+                "final": True,
+            },
         ]
 
     if intent_label == "MEMORY_RECALL":

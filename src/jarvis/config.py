@@ -20,6 +20,9 @@ DEFAULT_CONFIG = {
     "tts_voice": "en-US-AriaNeural",
     "tts_provider": "auto",
     "tts_benchmark_text": "System ready. This is a latency check.",
+    "tts_groq_enabled": False,
+    "tts_groq_model": "canopylabs/orpheus-v1-english",
+    "tts_groq_voice": "troy",
     "latency_logging_enabled": False,
     "denoise_enabled": False,
     "system_prompt": "You are Jarvis, a witty AI assistant. Keep responses short and punchy (1-2 sentences).",
@@ -42,6 +45,9 @@ DEFAULT_CONFIG = {
     "voice_ux_response_max_lines": 2,
     "voice_ux_metrics_enabled": False,
     "voice_ux_filler_patterns": ["uh", "um", "er", "erm", "hmm", "huh", "yeah", "yep", "nope", "ok", "okay", "gotcha", "sure", "right", "what", "huh"],
+    "web_search_provider": "auto",
+    "web_search_scrapling_enabled": True,
+    "web_search_timeout": 8,
 }
 
 

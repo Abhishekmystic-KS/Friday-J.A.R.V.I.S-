@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import datetime as dt
+import re
 import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -9,6 +10,12 @@ from typing import Any, Callable
 from urllib.parse import quote_plus
 
 import requests
+
+try:
+    from scrapling.fetchers import Fetcher
+    SCRAPLING_AVAILABLE = True
+except ImportError:
+    SCRAPLING_AVAILABLE = False
 
 from .memory import AgentMemory
 
@@ -76,6 +83,40 @@ def _safe_eval(expr: str) -> float:
     return float(eval(compile(node, "<expr>", "eval"), {"__builtins__": {}}, {}))
 
 
+def _scrapling_web_search(query: str, max_lines: int = 2) -> str | None:
+    """
+    Use Scrapling with stealthy headers to fetch search results.
+    Handles Cloudflare protection and anti-bot detection.
+    Falls back to None if Scrapling fails or is unavailable.
+    """
+    if not SCRAPLING_AVAILABLE:
+        return None
+
+    try:
+        # Fetch DuckDuckGo search results with Scrapling's stealthy capabilities
+        search_url = f"https://duckduckgo.com/html/?q={quote_plus(query)}"
+        page = Fetcher.get(search_url, stealthy_headers=True, timeout=8)
+
+        # Try multiple selectors to extract snippets
+        snippets = page.css(".result__snippet::text").getall()
+        if not snippets:
+            snippets = page.css(".result__body::text").getall()
+        if not snippets:
+            snippets = page.css("a.result__a::text").getall()  # Try titles
+        
+        # Filter out generic/short results and keep meaningful ones
+        meaningful = [s.strip() for s in snippets if s.strip() and len(s.strip()) > 15]
+        
+        if meaningful:
+            lines = [f"- {snippet}" for snippet in meaningful[:3]]
+            return _compact_lines(lines, max_lines=max_lines)
+
+        return None
+    except Exception as exc:
+        # Scrapling failed; will fall back to API-based search
+        return None
+
+
 def tool_get_time(_: dict[str, Any], __: AgentMemory, ___: Path) -> dict[str, Any]:
     now = dt.datetime.now()
     return {"status": "ok", "output": now.strftime("%Y-%m-%d %H:%M:%S")}
@@ -126,11 +167,34 @@ def tool_open_app(params: dict[str, Any], __: AgentMemory, ___: Path) -> dict[st
 
 def tool_web_search(params: dict[str, Any], __: AgentMemory, ___: Path) -> dict[str, Any]:
     query = str(params.get("query", "")).strip()
+    query = query.strip(" .,!?")
+    query = re.sub(r"^(?:for\s+)?(?:the\s+)?", "", query, flags=re.IGNORECASE).strip()
     max_lines = int(params.get("lines", 2))
     max_lines = 2 if max_lines < 1 else min(max_lines, 4)
     if not query:
         return {"status": "error", "output": "missing query"}
 
+    # Detect if query is asking for news
+    is_news_query = any(k in query.lower() for k in ["news", "latest", "today", "headline", "update", "recent", "breaking"])
+    
+    # For news queries, try Google News RSS first (returns actual headlines)
+    if is_news_query:
+        try:
+            news = _news_headlines_fallback(query, max_lines=max_lines)
+            if news:
+                return {"status": "ok", "output": news, "source": "google_news_rss"}
+        except Exception:
+            pass
+    
+    # Try Scrapling for regular searches (stealthy, handles anti-bot)
+    try:
+        result = _scrapling_web_search(query, max_lines=max_lines)
+        if result:
+            return {"status": "ok", "output": result, "source": "scrapling"}
+    except Exception:
+        pass
+
+    # Fall back to DuckDuckGo API
     try:
         url = "https://api.duckduckgo.com/"
         resp = requests.get(
@@ -166,26 +230,16 @@ def tool_web_search(params: dict[str, Any], __: AgentMemory, ___: Path) -> dict[
                 break
 
         if lines:
-            return {"status": "ok", "output": _compact_lines(lines, max_lines=max_lines)}
+            return {"status": "ok", "output": _compact_lines(lines, max_lines=max_lines), "source": "duckduckgo"}
 
-        # Fallback path for latest-news style queries.
-        is_news_query = any(k in query.lower() for k in ["news", "latest", "today", "headline", "update"])
-        if is_news_query:
+        # Last resort: try news fallback again if not already tried
+        if not is_news_query:
             news = _news_headlines_fallback(query, max_lines=max_lines)
             if news:
-                return {"status": "ok", "output": news}
+                return {"status": "ok", "output": news, "source": "google_news_rss_fallback"}
 
-        return {"status": "ok", "output": "no concise web result found"}
+        return {"status": "ok", "output": "no concise web result found", "source": "none"}
     except Exception as exc:
-        # One more attempt via RSS for news-like queries if primary API fails.
-        try:
-            is_news_query = any(k in query.lower() for k in ["news", "latest", "today", "headline", "update"])
-            if is_news_query:
-                news = _news_headlines_fallback(query, max_lines=max_lines)
-                if news:
-                    return {"status": "ok", "output": news}
-        except Exception:
-            pass
         return {"status": "error", "output": f"web search failed: {exc}"}
 
 

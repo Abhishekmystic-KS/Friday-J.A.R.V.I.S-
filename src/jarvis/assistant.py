@@ -133,7 +133,72 @@ def synthesize_edge_tts_to_mp3(text, tts_voice):
     return audio_path
 
 
-def benchmark_tts_provider(provider, sample_text, tts_voice):
+def split_text_for_tts(text, max_chars=200):
+    text = (text or "").strip()
+    if not text:
+        return []
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks = []
+    parts = re.split(r"(?<=[.!?])\s+", text)
+    current = ""
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+
+        if len(part) > max_chars:
+            words = part.split()
+            sub = ""
+            for word in words:
+                next_sub = f"{sub} {word}".strip()
+                if len(next_sub) > max_chars and sub:
+                    chunks.append(sub)
+                    sub = word
+                else:
+                    sub = next_sub
+            if sub:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                chunks.append(sub)
+            continue
+
+        candidate = f"{current} {part}".strip() if current else part
+        if len(candidate) > max_chars and current:
+            chunks.append(current)
+            current = part
+        else:
+            current = candidate
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def synthesize_groq_tts_to_wav(text, groq_client, groq_model, groq_voice):
+    response = groq_client.audio.speech.create(
+        model=groq_model,
+        voice=groq_voice,
+        input=text,
+        response_format="wav",
+    )
+    data = response.read()
+    with tempfile.NamedTemporaryFile(prefix="jarvis_groq_tts_", suffix=".wav", delete=False) as tmp:
+        tmp.write(data)
+        return tmp.name
+
+
+def benchmark_tts_provider(
+    provider,
+    sample_text,
+    tts_voice,
+    *,
+    groq_client=None,
+    groq_tts_model="canopylabs/orpheus-v1-english",
+    groq_tts_voice="troy",
+):
     t0 = time.perf_counter()
     if provider == "edge":
         audio_path = None
@@ -166,12 +231,50 @@ def benchmark_tts_provider(provider, sample_text, tts_voice):
             if isinstance(wav_path, str) and os.path.exists(wav_path):
                 os.remove(wav_path)
 
+    if provider == "groq":
+        if groq_client is None:
+            return None
+        wav_path = None
+        try:
+            with tempfile.NamedTemporaryFile(prefix="jarvis_groq_bench_", suffix=".wav", delete=False) as tmp:
+                wav_path = tmp.name
+            response = groq_client.audio.speech.create(
+                model=groq_tts_model,
+                voice=groq_tts_voice,
+                input=sample_text[:200],
+                response_format="wav",
+            )
+            data = response.read()
+            with open(wav_path, "wb") as f:
+                f.write(data)
+            return (time.perf_counter() - t0) * 1000
+        except Exception:
+            return None
+        finally:
+            if isinstance(wav_path, str) and os.path.exists(wav_path):
+                os.remove(wav_path)
+
     return None
 
 
-def select_tts_provider(tts_provider, tts_voice, benchmark_text, logger, verbose=False):
+def select_tts_provider(
+    tts_provider,
+    tts_voice,
+    benchmark_text,
+    logger,
+    verbose=False,
+    *,
+    groq_enabled=False,
+    groq_client=None,
+    groq_tts_model="canopylabs/orpheus-v1-english",
+    groq_tts_voice="troy",
+):
     preferred = (tts_provider or "edge").strip().lower()
-    if preferred in {"edge", "espeak"}:
+    if preferred in {"edge", "espeak", "groq"}:
+        if preferred == "groq" and not groq_enabled:
+            print("[tts] groq disabled in config, falling back to edge")
+            logger.info("tts_provider_fallback=groq_disabled")
+            return "edge"
         if preferred == "espeak" and not shutil.which("espeak"):
             print("[tts] espeak not found, falling back to edge")
             logger.info("tts_provider_fallback=espeak_missing")
@@ -182,9 +285,18 @@ def select_tts_provider(tts_provider, tts_voice, benchmark_text, logger, verbose
         return "edge"
 
     candidates = ["edge", "espeak"]
+    if groq_enabled:
+        candidates.append("groq")
     timings = {}
     for provider in candidates:
-        ms = benchmark_tts_provider(provider, benchmark_text, tts_voice)
+        ms = benchmark_tts_provider(
+            provider,
+            benchmark_text,
+            tts_voice,
+            groq_client=groq_client,
+            groq_tts_model=groq_tts_model,
+            groq_tts_voice=groq_tts_voice,
+        )
         if ms is not None:
             timings[provider] = ms
 
@@ -199,7 +311,17 @@ def select_tts_provider(tts_provider, tts_voice, benchmark_text, logger, verbose
     return chosen
 
 
-def speak(text, tts_voice, tts_provider, logger, latency_logging_enabled):
+def speak(
+    text,
+    tts_voice,
+    tts_provider,
+    logger,
+    latency_logging_enabled,
+    *,
+    groq_client=None,
+    groq_tts_model="canopylabs/orpheus-v1-english",
+    groq_tts_voice="troy",
+):
     if not text:
         return
 
@@ -221,6 +343,25 @@ def speak(text, tts_voice, tts_provider, logger, latency_logging_enabled):
             )
             play_ms = (time.perf_counter() - t_play) * 1000
             played = True
+        elif tts_provider == "groq":
+            client = groq_client
+            if client is None:
+                client = Groq(api_key=load_api_key())
+
+            for chunk in split_text_for_tts(text, max_chars=200):
+                audio_path = None
+                try:
+                    t_synth = time.perf_counter()
+                    audio_path = synthesize_groq_tts_to_wav(chunk, client, groq_tts_model, groq_tts_voice)
+                    synth_ms += (time.perf_counter() - t_synth) * 1000
+
+                    t_play = time.perf_counter()
+                    chunk_played = play_mp3(audio_path)
+                    play_ms += (time.perf_counter() - t_play) * 1000
+                    played = played or chunk_played
+                finally:
+                    if isinstance(audio_path, str) and os.path.exists(audio_path):
+                        os.remove(audio_path)
         else:
             audio_path = None
             try:
@@ -236,6 +377,16 @@ def speak(text, tts_voice, tts_provider, logger, latency_logging_enabled):
                     os.remove(audio_path)
     except Exception as exc:
         print("TTS error:", exc)
+        # If Groq fails at runtime (terms/network/etc), auto-fallback to edge.
+        if tts_provider == "groq":
+            try:
+                audio_path = synthesize_edge_tts_to_mp3(text, tts_voice)
+                played = play_mp3(audio_path)
+            except Exception:
+                pass
+            finally:
+                if "audio_path" in locals() and isinstance(audio_path, str) and os.path.exists(audio_path):
+                    os.remove(audio_path)
 
     total_ms = (time.perf_counter() - t0) * 1000
     if latency_logging_enabled:
@@ -421,6 +572,9 @@ def stream_llm_response_and_speak(
     tts_provider,
     logger,
     latency_logging_enabled,
+    groq_tts_client=None,
+    groq_tts_model="canopylabs/orpheus-v1-english",
+    groq_tts_voice="troy",
 ):
     history.append({"role": "user", "content": user_text})
 
@@ -433,7 +587,16 @@ def stream_llm_response_and_speak(
             try:
                 if item is stop_token:
                     return
-                speak(item, tts_voice, tts_provider, logger, latency_logging_enabled)
+                speak(
+                    item,
+                    tts_voice,
+                    tts_provider,
+                    logger,
+                    latency_logging_enabled,
+                    groq_client=groq_tts_client,
+                    groq_tts_model=groq_tts_model,
+                    groq_tts_voice=groq_tts_voice,
+                )
             finally:
                 tts_queue.task_done()
 
@@ -510,6 +673,10 @@ def run_assistant():
     wake_cooldown = int(config["wake_cooldown_seconds"])
     max_history = int(config["max_history_messages"])
     tts_voice = str(config["tts_voice"])
+    tts_groq_enabled = bool(config.get("tts_groq_enabled", False))
+    tts_groq_model = str(config.get("tts_groq_model", "canopylabs/orpheus-v1-english"))
+    tts_groq_voice = str(config.get("tts_groq_voice", "troy"))
+    tts_benchmark_text = str(config.get("tts_benchmark_text", "System ready. This is a latency check."))
     denoise_enabled = bool(config.get("denoise_enabled", False))
     latency_logging_enabled = bool(config.get("latency_logging_enabled", True))
     agent_enabled = bool(config.get("agent_enabled", False))
@@ -522,16 +689,36 @@ def run_assistant():
     agent_use_llm_planner = bool(config.get("agent_use_llm_planner", True))
     agent_memory_enabled = bool(config.get("agent_memory_enabled", True))
     agent_memory_file = ROOT_DIR / str(config.get("agent_memory_file", "data/memory/agent_memory.jsonl"))
-    tts_provider = select_tts_provider(
-        str(config.get("tts_provider", "auto")),
-        tts_voice,
-        str(config.get("tts_benchmark_text", "System ready. This is a latency check.")),
-        logger,
-        latency_logging_enabled,
-    )
 
     api_key = load_api_key()
     client = Groq(api_key=api_key)
+
+    tts_provider = select_tts_provider(
+        str(config.get("tts_provider", "auto")),
+        tts_voice,
+        tts_benchmark_text,
+        logger,
+        latency_logging_enabled,
+        groq_enabled=tts_groq_enabled,
+        groq_client=client,
+        groq_tts_model=tts_groq_model,
+        groq_tts_voice=tts_groq_voice,
+    )
+
+    groq_tts_client = client if tts_groq_enabled else None
+    if tts_provider == "groq":
+        groq_probe = benchmark_tts_provider(
+            "groq",
+            tts_benchmark_text,
+            tts_voice,
+            groq_client=client,
+            groq_tts_model=tts_groq_model,
+            groq_tts_voice=tts_groq_voice,
+        )
+        if groq_probe is None:
+            tts_provider = "edge"
+            print("[tts] groq unavailable right now, using edge")
+            logger.info("tts_provider_fallback=groq_unavailable")
 
     agent_memory = AgentMemory(agent_memory_file)
     agent_tools = build_tool_registry(agent_memory, ROOT_DIR)
@@ -583,6 +770,9 @@ def run_assistant():
                         tts_provider,
                         logger,
                         latency_logging_enabled,
+                        groq_client=groq_tts_client,
+                        groq_tts_model=tts_groq_model,
+                        groq_tts_voice=tts_groq_voice,
                     )
                     continue
 
@@ -631,7 +821,16 @@ def run_assistant():
                     robo_process = stop_process(robo_process)
                     orb_process = launch_orb(orb_process)
                     sleep_msg = "Going to sleep. Say friday or hey friday to wake me."
-                    speak(sleep_msg, tts_voice, tts_provider, logger, latency_logging_enabled)
+                    speak(
+                        sleep_msg,
+                        tts_voice,
+                        tts_provider,
+                        logger,
+                        latency_logging_enabled,
+                        groq_client=groq_tts_client,
+                        groq_tts_model=tts_groq_model,
+                        groq_tts_voice=tts_groq_voice,
+                    )
                     logger.info("assistant=%s", sleep_msg)
                     continue
 
@@ -649,6 +848,9 @@ def run_assistant():
                             tts_provider,
                             logger,
                             latency_logging_enabled,
+                            groq_client=groq_tts_client,
+                            groq_tts_model=tts_groq_model,
+                            groq_tts_voice=tts_groq_voice,
                         )
                         last_wake = now
                     continue
@@ -666,6 +868,9 @@ def run_assistant():
                             tts_provider,
                             logger,
                             latency_logging_enabled,
+                            groq_client=groq_tts_client,
+                            groq_tts_model=tts_groq_model,
+                            groq_tts_voice=tts_groq_voice,
                         )
                         last_wake = now
                     continue
@@ -697,7 +902,16 @@ def run_assistant():
                     conf = float(intent.get("confidence", 0))
                     if conf < confidence_threshold:
                         clarify_msg = "Sorry, could you say that again?"
-                        speak(clarify_msg, tts_voice, tts_provider, logger, latency_logging_enabled)
+                        speak(
+                            clarify_msg,
+                            tts_voice,
+                            tts_provider,
+                            logger,
+                            latency_logging_enabled,
+                            groq_client=groq_tts_client,
+                            groq_tts_model=tts_groq_model,
+                            groq_tts_voice=tts_groq_voice,
+                        )
                         logger.info("clarification=%s confidence=%.2f", clarify_msg, conf)
                         print("JARVIS:", clarify_msg)
                         if metrics_enabled:
@@ -738,7 +952,16 @@ def run_assistant():
                         )
 
                     append_history_turn(history, text, response, max_history)
-                    speak(response, tts_voice, tts_provider, logger, latency_logging_enabled)
+                    speak(
+                        response,
+                        tts_voice,
+                        tts_provider,
+                        logger,
+                        latency_logging_enabled,
+                        groq_client=groq_tts_client,
+                        groq_tts_model=tts_groq_model,
+                        groq_tts_voice=tts_groq_voice,
+                    )
                     if metrics_enabled:
                         voice_metrics.log_turn(
                             user_text=text,
@@ -758,6 +981,9 @@ def run_assistant():
                         tts_provider,
                         logger,
                         latency_logging_enabled,
+                        groq_tts_client=groq_tts_client,
+                        groq_tts_model=tts_groq_model,
+                        groq_tts_voice=tts_groq_voice,
                     )
 
                 print("JARVIS:", response)
