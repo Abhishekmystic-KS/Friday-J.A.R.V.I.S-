@@ -139,3 +139,8 @@ See [`docs/integrations/SCRAPLING_INTEGRATION.md`](docs/integrations/SCRAPLING_I
 - Agent memory: `data/memory/agent_memory.jsonl`
 - Animation frames cached in: `assets/media/animations/`
 - Project is actively being developed
+
+## Authors
+
+- **Abhishekmystic-KS** — [github.com/Abhishekmystic-KS](https://github.com/Abhishekmystic-KS) — Original Author
+- **AkshathaaRk** — [github.com/AkshathaaRk](https://github.com/AkshathaaRk) — Co-Developer
