@@ -6,6 +6,10 @@ A voice assistant with wake-word detection, STT, LLM, TTS, an agentic layer, a R
 
 [▶ Watch Demo Video](https://github.com/Abhishekmystic-KS/Friday-J.A.R.V.I.S-/raw/refs/heads/main/assets/media/demo/demovideo.mp4)
 
+## Workflow
+
+![Friday J.A.R.V.I.S Workflow](https://github.com/user-attachments/assets/65a7b3cc-0d5c-4a62-aa5d-fe798f604e50)
+
 ## Quick Setup
 
 ```bash
