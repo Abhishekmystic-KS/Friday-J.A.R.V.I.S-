@@ -1,0 +1,24 @@
+# ── Core dependencies ─────────────────────────────────────────────────────────
+groq
+python-dotenv
+sounddevice
+soundfile
+numpy
+webrtcvad-wheels      # pre-built wheels for all platforms (drop-in for webrtcvad)
+noisereduce
+edge-tts
+requests
+pynput                # optional: global hotkey support
+
+# ── RAG knowledge base ────────────────────────────────────────────────────────
+sentence-transformers
+chromadb
+langchain-text-splitters
+
+# ── Build compatibility ────────────────────────────────────────────────────────
+setuptools<81
+
+# ── Optional: stealthy web search ─────────────────────────────────────────────
+# Uncomment the line below to enable Scrapling-based web search.
+# After installing, also run: scrapling install
+# scrapling[ai]
