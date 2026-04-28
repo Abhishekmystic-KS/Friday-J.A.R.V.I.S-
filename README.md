@@ -8,7 +8,7 @@ A voice assistant with wake-word detection, STT, LLM, TTS, an agentic layer, a R
 
 ## Workflow
 
-![Friday J.A.R.V.I.S Workflow](https://github.com/user-attachments/assets/65a7b3cc-0d5c-4a62-aa5d-fe798f604e50)
+![Friday J.A.R.V.I.S Workflow](https://github.com/user-attachments/assets/fd3f0484-0251-4d0f-9f2a-3b01aca6f17c)
 
 ## Quick Setup
 
