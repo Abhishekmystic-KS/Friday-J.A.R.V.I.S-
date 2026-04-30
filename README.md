@@ -15,9 +15,7 @@ A voice assistant with wake-word detection, STT, LLM, TTS, an agentic layer, a R
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install groq python-dotenv sounddevice soundfile numpy webrtcvad noisereduce edge-tts pynput
-pip install sentence-transformers chromadb langchain-text-splitters
-pip install "setuptools<81"
+pip install -r requirements.txt
 # Optional: Scrapling for stealthy web search
 pip install "scrapling[ai]" && scrapling install
 ```
